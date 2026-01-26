@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
-import { existsSync, readFileSync } from 'fs';
 
 @Injectable()
 export class FirebaseService {
@@ -21,24 +20,24 @@ export class FirebaseService {
       }
     }
 
-    const serviceAccountPath = this.configService.get<string>(
-      'FIREBASE_SERVICE_ACCOUNT_PATH',
-    );
-    if (!serviceAccountPath) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_PATH is not set');
-    }
-    if (!existsSync(serviceAccountPath)) {
+
+
+    const projectId = this.configService.get<string>('FIREBASE_PROJECT_ID');
+    const clientEmail = this.configService.get<string>('FIREBASE_CLIENT_EMAIL');
+    const privateKey = this.configService.get<string>('FIREBASE_PRIVATE_KEY');
+
+    if (!projectId || !clientEmail || !privateKey) {
       throw new Error(
-        `Firebase service account file not found at ${serviceAccountPath}`,
+        'Firebase service account env is not set (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY)',
       );
     }
 
-    const serviceAccount = JSON.parse(
-      readFileSync(serviceAccountPath, 'utf8'),
-    ) as admin.ServiceAccount;
-
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, '\n'),
+      }),
     });
   }
 
